@@ -246,7 +246,9 @@ func (g *CaddyfileGenerator) getCaddyNetworks() ([]string, error) {
 	log.Printf("[INFO] Caddy ContainerID: %v\n", containerID)
 	container, err := g.dockerClient.ContainerInspect(context.Background(), containerID)
 	if err != nil {
-		return nil, err
+		log.Print(err)
+		// return nil, err
+		// ignore this error
 	}
 
 	var networks []string
