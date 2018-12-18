@@ -23,7 +23,7 @@ func (wrapper *dockerUtils) GetCurrentContainerID() (string, error) {
 	file, err := os.Open("/proc/self/cgroup")
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	reader := bufio.NewReader(file)
@@ -33,7 +33,7 @@ func (wrapper *dockerUtils) GetCurrentContainerID() (string, error) {
 	for scanner.Scan() {
 		_, lines, err := bufio.ScanLines([]byte(scanner.Text()), true)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		strLines := string(lines)
 		if id := matchDockerCurrentContainerID(strLines); id != "" {
@@ -42,7 +42,7 @@ func (wrapper *dockerUtils) GetCurrentContainerID() (string, error) {
 			return id, nil
 		}
 	}
-	return nil, errors.New("Cannot find container id")
+	return "", errors.New("Cannot find container id")
 }
 
 func matchDockerCurrentContainerID(lines string) string {
