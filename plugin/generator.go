@@ -258,7 +258,7 @@ func (g *CaddyfileGenerator) getCaddyNetworks() ([]string, error) {
 		if !networkInfo.Ingress {
 			networks = append(networks, network.NetworkID)
 		}
-		if !networkInfo.Name == "host" {
+		if networkInfo.Name == "host" {
 			g.isInHostMode = true
 			log.Printf("[INFO] Caddy is running in host mode")
 		}
@@ -282,6 +282,7 @@ func (g *CaddyfileGenerator) getContainerDirectives(container *types.Container) 
 
 func (g *CaddyfileGenerator) getContainerIPAddress(container *types.Container) (string, error) {
 	if g.isInHostMode {
+		network := container.NetworkSettings.Networks[0]
 		return network.IPAddress, nil
 	}
 	for _, network := range container.NetworkSettings.Networks {
