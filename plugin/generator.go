@@ -281,11 +281,10 @@ func (g *CaddyfileGenerator) getContainerDirectives(container *types.Container) 
 }
 
 func (g *CaddyfileGenerator) getContainerIPAddress(container *types.Container) (string, error) {
-	if g.isInHostMode {
-		network := container.NetworkSettings.Networks[0]
-		return network.IPAddress, nil
-	}
 	for _, network := range container.NetworkSettings.Networks {
+		if g.isInHostMode {
+			return network.IPAddress, nil
+		}
 		if _, isCaddyNetwork := g.caddyNetworks[network.NetworkID]; isCaddyNetwork {
 			return network.IPAddress, nil
 		}
