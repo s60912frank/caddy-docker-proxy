@@ -1,11 +1,10 @@
 package plugin
 
 import (
+	"bufio"
 	"errors"
-	"io/ioutil"
 	"os"
 	"regexp"
-	"runtime"
 )
 
 // DockerUtils is an interface with docker utilities
@@ -20,23 +19,55 @@ func CreateDockerUtils() DockerUtils {
 	return &dockerUtils{}
 }
 
-// GetCurrentContainerID returns the id of the container running this application
 func (wrapper *dockerUtils) GetCurrentContainerID() (string, error) {
-	if runtime.GOOS == "windows" {
-		return os.Hostname()
+	file, err := os.Open("/proc/self/cgroup")
+
+	if err != nil {
+		return nil, err
 	}
 
-	bytes, err := ioutil.ReadFile("/proc/self/cgroup")
-	if err != nil {
-		return "", err
-	}
-	if len(bytes) > 0 {
-		cgroups := string(bytes)
-		idRegex := regexp.MustCompile("docker/([A-Za-z0-9]+)")
-		matches := idRegex.FindStringSubmatch(cgroups)
-		if len(matches) > 1 {
-			return matches[1], nil
+	reader := bufio.NewReader(file)
+	scanner := bufio.NewScanner(reader)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		_, lines, err := bufio.ScanLines([]byte(scanner.Text()), true)
+		if err != nil {
+			return nil, err
+		}
+		strLines := string(lines)
+		if id := matchDockerCurrentContainerID(strLines); id != "" {
+			return id, nil
+		} else if id := matchECSCurrentContainerID(strLines); id != "" {
+			return id, nil
 		}
 	}
-	return "", errors.New("Cannot find container id")
+	return nil, errors.New("Cannot find container id")
+}
+
+func matchDockerCurrentContainerID(lines string) string {
+	regex := "/docker[/-]([[:alnum:]]{64})(\\.scope)?$"
+	re := regexp.MustCompilePOSIX(regex)
+
+	if re.MatchString(lines) {
+		submatches := re.FindStringSubmatch(string(lines))
+		containerID := submatches[1]
+
+		return containerID
+	}
+	return ""
+}
+
+func matchECSCurrentContainerID(lines string) string {
+	regex := "/ecs\\/[^\\/]+\\/(.+)$"
+	re := regexp.MustCompilePOSIX(regex)
+
+	if re.MatchString(string(lines)) {
+		submatches := re.FindStringSubmatch(string(lines))
+		containerID := submatches[1]
+
+		return containerID
+	}
+
+	return ""
 }
