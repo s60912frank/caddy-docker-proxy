@@ -258,7 +258,7 @@ func (g *CaddyfileGenerator) getCaddyNetworks() ([]string, error) {
 		if !networkInfo.Ingress {
 			networks = append(networks, network.NetworkID)
 		}
-		if networkInfo.Name == "host" {
+		if networkInfo.Driver == "host" {
 			g.isInHostMode = true
 			log.Printf("[INFO] Caddy is running in host mode")
 		}
