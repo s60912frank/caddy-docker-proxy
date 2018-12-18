@@ -31,6 +31,7 @@ type CaddyfileGenerator struct {
 	dockerClient         DockerClient
 	dockerUtils          DockerUtils
 	caddyNetworks        map[string]bool
+	isInHostMode         bool
 	swarmIsAvailable     bool
 	swarmIsAvailableTime time.Time
 }
@@ -91,6 +92,7 @@ func CreateGenerator(dockerClient DockerClient, dockerUtils DockerUtils, options
 		labelPrefix:       options.labelPrefix,
 		labelRegex:        regexp.MustCompile(labelRegexString),
 		proxyServiceTasks: options.proxyServiceTasks,
+		isInHostMode:      false,
 	}
 }
 
@@ -118,10 +120,10 @@ func (g *CaddyfileGenerator) GenerateCaddyFile() []byte {
 	directives := map[string]*directiveData{}
 
 	if g.caddyFilePath != "" {
-		dat, err := ioutil.ReadFile(g.caddyFilePath);
-		
+		dat, err := ioutil.ReadFile(g.caddyFilePath)
+
 		if err == nil {
-			_, err = buffer.Write(dat);
+			_, err = buffer.Write(dat)
 		}
 
 		if err != nil {
@@ -256,6 +258,10 @@ func (g *CaddyfileGenerator) getCaddyNetworks() ([]string, error) {
 		if !networkInfo.Ingress {
 			networks = append(networks, network.NetworkID)
 		}
+		if !networkInfo.Name == "host" {
+			g.isInHostMode = true
+			log.Printf("[INFO] Caddy is running in host mode")
+		}
 	}
 	log.Printf("[INFO] Caddy Networks: %v\n", networks)
 
@@ -275,6 +281,9 @@ func (g *CaddyfileGenerator) getContainerDirectives(container *types.Container) 
 }
 
 func (g *CaddyfileGenerator) getContainerIPAddress(container *types.Container) (string, error) {
+	if g.isInHostMode {
+		return network.IPAddress, nil
+	}
 	for _, network := range container.NetworkSettings.Networks {
 		if _, isCaddyNetwork := g.caddyNetworks[network.NetworkID]; isCaddyNetwork {
 			return network.IPAddress, nil
